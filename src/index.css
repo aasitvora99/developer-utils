@@ -67,3 +67,27 @@
     @apply bg-background text-foreground;
   }
 }
+@layer base {
+  /* Firefox scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) var(--background);
+  }
+
+  /* WebKit scrollbar */
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--primary));
+    border-radius: 9999px; /* fully rounded */
+    border: 2px solid hsl(var(--background)); /* space between thumb and track */
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--primary) / 0.8); /* lighter on hover */
+  }
+}

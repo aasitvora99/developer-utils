@@ -1,8 +1,8 @@
-import React from 'react';
-import { FileText, GitCompare, Workflow, DivideIcon as LucideIcon, Menu, X } from 'lucide-react';
+import { FileText, GitCompare, Workflow, Code, Menu, X } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { UtilityTab } from '../types';
 import { Button } from '@/components/ui/button';
-import { ThemeToggle } from './ThemeToggle';
+import ThemeToggle from './ThemeToggle';
 
 interface SidebarProps {
   activeTab: string;
@@ -14,6 +14,7 @@ interface SidebarProps {
 
 const iconMap: Record<string, LucideIcon> = {
   'file-text': FileText,
+  'code': Code,
   'git-compare': GitCompare,
   'workflow': Workflow,
 };
