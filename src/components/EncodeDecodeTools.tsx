@@ -5,32 +5,59 @@ import { useToast } from '@/hooks/useToast';
 import { ToastComponent } from './ui/Toast';
 
 const EncodeDecodeTools = () => {
-  const { toasts, addToast, closeToast, removeToast } = useToast();
+  const { toasts, addToast, closeToast } = useToast();
   const [input, setInput] = useState('');
   const [output, setOutput] = useState('');
   const [activeTab, setActiveTab] = useState('base64');
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastType, setToastType] = useState<'success' | 'error' | 'warning' | 'info'>('success');
-  const [showToast, setShowToast] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
 
-
-  // Main encoding/decoding functions
   const convertFunctions = useMemo(() => ({
     base64: {
       encode: (str: string) => btoa(unescape(encodeURIComponent(str))),
-      decode: (str: string) => decodeURIComponent(escape(atob(str.replace(/\s/g, '')))),
+      decode: (str: string) => {
+        try {
+          return decodeURIComponent(escape(atob(str.replace(/\s/g, ''))));
+        } catch (error) {
+          throw new Error('Invalid Base64 string');
+        }
+      },
       description: 'Base64 encoding is commonly used for encoding binary data in text format',
-      isValidEncoded: (str: string) => /^[A-Za-z0-9+/]*={0,2}$/.test(str.replace(/\s/g, '')),
+      isValidEncoded: (str: string) => {
+        const cleaned = str.replace(/\s/g, '');
+        // Only consider it valid Base64 if it's longer than 8 characters
+        // and properly formatted
+        if (cleaned.length < 8 || cleaned.length % 4 !== 0) {
+          return false;
+        }
+        if (!/^[A-Za-z0-9+/]*={0,2}$/.test(cleaned)) {
+          return false;
+        }
+        // Additional check: try to decode it
+        try {
+          atob(cleaned);
+          return true;
+        } catch {
+          return false;
+        }
+      },
       example: { input: 'Hello World!', output: 'SGVsbG8gV29ybGQh' },
       icon: Code
     },
     url: {
       encode: (str: string) => encodeURIComponent(str),
-      decode: (str: string) => decodeURIComponent(str),
+      decode: (str: string) => {
+        try {
+          return decodeURIComponent(str);
+        } catch (error) {
+          throw new Error('Invalid URL encoded string');
+        }
+      },
       description: 'URL encoding replaces unsafe ASCII characters with % followed by hex digits',
-      isValidEncoded: (str: string) => /%[0-9A-Fa-f]{2}/.test(str),
+      isValidEncoded: (str: string) => {
+        // Only auto-decode if it has URL encoded characters and is at least somewhat substantial
+        return /%[0-9A-Fa-f]{2}/.test(str) && str.length > 3;
+      },
       example: { input: 'Hello World!', output: 'Hello%20World%21' },
       icon: Globe
     },
@@ -41,13 +68,20 @@ const EncodeDecodeTools = () => {
         return div.innerHTML;
       },
       decode: (str: string) => {
-        const div = document.createElement('div');
-        div.innerHTML = str;
-        return div.textContent || '';
+        try {
+          const div = document.createElement('div');
+          div.innerHTML = str;
+          return div.textContent || '';
+        } catch (error) {
+          throw new Error('Invalid HTML entities');
+        }
       },
       description: 'HTML encoding converts special characters to HTML entities',
-      isValidEncoded: (str: string) => /&[a-zA-Z]+;|&#\d+;|&#x[0-9A-Fa-f]+;/.test(str),
-      example: { input: '<script>alert("hi")</script>', output: '<script>alert("hi")</script>' },
+      isValidEncoded: (str: string) => {
+        // Only auto-decode if it has HTML entities and is substantial
+        return /&[a-zA-Z]+;|&#\d+;|&#x[0-9A-Fa-f]+;/.test(str) && str.length > 4;
+      },
+      example: { input: '<script>alert("hi")</script>', output: '&lt;script&gt;alert(&quot;hi&quot;)&lt;/script&gt;' },
       icon: Code
     },
     hex: {
@@ -57,12 +91,22 @@ const EncodeDecodeTools = () => {
       decode: (str: string) => {
         const cleaned = str.replace(/[\s\n]/g, '');
         if (cleaned.length % 2 !== 0) throw new Error('Invalid hex string length');
-        return cleaned.match(/.{1,2}/g)
-          ?.map(byte => String.fromCharCode(parseInt(byte, 16)))
-          .join('') || '';
+        try {
+          return cleaned.match(/.{1,2}/g)
+            ?.map(byte => String.fromCharCode(parseInt(byte, 16)))
+            .join('') || '';
+        } catch (error) {
+          throw new Error('Invalid hex characters');
+        }
       },
       description: 'Hexadecimal encoding converts each character to its hex representation',
-      isValidEncoded: (str: string) => /^[0-9A-Fa-f\s]*$/.test(str) && str.replace(/\s/g, '').length % 2 === 0,
+      isValidEncoded: (str: string) => {
+        const cleaned = str.replace(/\s/g, '');
+        // Must be all hex chars, even length, and at least 4 chars long
+        return /^[0-9A-Fa-f]+$/.test(cleaned) &&
+          cleaned.length >= 4 &&
+          cleaned.length % 2 === 0;
+      },
       example: { input: 'Hello', output: '48656c6c6f' },
       icon: Hash
     },
@@ -73,12 +117,22 @@ const EncodeDecodeTools = () => {
       decode: (str: string) => {
         const cleaned = str.replace(/[^01]/g, '');
         if (cleaned.length % 8 !== 0) throw new Error('Invalid binary string length');
-        return cleaned.match(/.{1,8}/g)
-          ?.map(byte => String.fromCharCode(parseInt(byte, 2)))
-          .join('') || '';
+        try {
+          return cleaned.match(/.{1,8}/g)
+            ?.map(byte => String.fromCharCode(parseInt(byte, 2)))
+            .join('') || '';
+        } catch (error) {
+          throw new Error('Invalid binary characters');
+        }
       },
       description: 'Binary encoding converts each character to its 8-bit binary representation',
-      isValidEncoded: (str: string) => /^[01\s]*$/.test(str) && str.replace(/\s/g, '').length % 8 === 0,
+      isValidEncoded: (str: string) => {
+        const cleaned = str.replace(/\s/g, '');
+        // Must be all binary chars, divisible by 8, and at least 8 chars long
+        return /^[01]+$/.test(cleaned) &&
+          cleaned.length >= 8 &&
+          cleaned.length % 8 === 0;
+      },
       example: { input: 'Hi', output: '01001000 01101001' },
       icon: Binary
     },
@@ -93,8 +147,12 @@ const EncodeDecodeTools = () => {
 
           const [headerB64, payloadB64, signature] = parts;
 
-          const header = JSON.parse(atob(headerB64.replace(/-/g, '+').replace(/_/g, '/')));
-          const payload = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')));
+          // Handle URL-safe Base64 padding
+          const padHeader = headerB64.replace(/-/g, '+').replace(/_/g, '/').padEnd(headerB64.length + (4 - headerB64.length % 4) % 4, '=');
+          const padPayload = payloadB64.replace(/-/g, '+').replace(/_/g, '/').padEnd(payloadB64.length + (4 - payloadB64.length % 4) % 4, '=');
+
+          const header = JSON.parse(atob(padHeader));
+          const payload = JSON.parse(atob(padPayload));
 
           return JSON.stringify({
             header,
@@ -108,7 +166,10 @@ const EncodeDecodeTools = () => {
       description: 'JSON Web Token decoder - paste a JWT to see its header and payload',
       isValidEncoded: (str: string) => {
         const parts = str.split('.');
-        return parts.length === 3 && parts.every(part => /^[A-Za-z0-9_-]+$/.test(part));
+        // Must have exactly 3 parts, each part must be URL-safe Base64, and reasonable length
+        return parts.length === 3 &&
+          parts.every(part => part.length > 0 && /^[A-Za-z0-9_-]+$/.test(part)) &&
+          str.length > 50; // JWTs are typically much longer
       },
       example: { input: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c', output: 'Decoded JWT content' },
       icon: Shield
@@ -120,10 +181,10 @@ const EncodeDecodeTools = () => {
       setIsProcessing(true);
       const result = convertFunctions[tab as keyof typeof convertFunctions].encode(text);
       setOutput(result);
-      addToast('Text encoded successfully', 'success');
+      // addToast('Text encoded successfully', 'success');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Encoding failed';
-      addToast(`Error: ${message}`, 'error');
+      // addToast(`Error: ${message}`, 'error');
       console.error(error);
     } finally {
       setIsProcessing(false);
