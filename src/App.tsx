@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import JsonVisualizer from './components/JsonVisualizer';
 import DiffChecker from './components/DiffChecker';
 import MermaidVisualizer from './components/MermaidVisualizer';
+import EncodeDecodeTools from './components/EncodeDecodeTools';
 import { ThemeProvider } from './hooks/useTheme';
 import { UtilityTab } from './types';
+import { ToastProvider } from './components/ui/Toast';
 
 const utilities: UtilityTab[] = [
   {
@@ -25,6 +27,12 @@ const utilities: UtilityTab[] = [
     icon: 'workflow',
     component: MermaidVisualizer,
   },
+    {
+    id: 'encode-decode',
+    name: 'Encode / Decode',
+    icon: 'code',
+    component: EncodeDecodeTools,
+  },
 ];
 
 function App() {
@@ -36,27 +44,29 @@ function App() {
 
   return (
     <ThemeProvider defaultTheme="dark" storageKey="utilities-theme">
-      <div className="h-screen w-screen bg-gradient-to-br from-background via-background/95 to-background flex overflow-hidden">
-        {/* Background Effects */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-secondary/10 via-transparent to-transparent"></div>
-        
-        {/* Sidebar */}
-        <Sidebar 
-          activeTab={activeTab} 
-          onTabChange={setActiveTab}
-          tabs={utilities}
-          collapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-        />
-        
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 bg-background/10 backdrop-blur-sm">
-            <ActiveComponent />
+      <ToastProvider>
+        <div className="h-screen w-screen bg-gradient-to-br from-background via-background/95 to-background flex overflow-auto">
+          {/* Background Effects */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent"></div>
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-secondary/10 via-transparent to-transparent"></div>
+          
+          {/* Sidebar */}
+          <Sidebar 
+            activeTab={activeTab} 
+            onTabChange={setActiveTab}
+            tabs={utilities}
+            collapsed={sidebarCollapsed}
+            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          />
+          
+          {/* Main Content */}
+          <div className="flex-1 flex flex-col overflow-auto">
+            <div className="flex-1 bg-background/10 backdrop-blur-sm">
+              <ActiveComponent />
+            </div>
           </div>
         </div>
-      </div>
+      </ToastProvider>
     </ThemeProvider>
   );
 }
